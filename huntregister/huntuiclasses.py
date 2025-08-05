@@ -8,8 +8,8 @@
                               -------------------
         begin                : 2020-03-26
         git sha              : $Format:%H$
-        copyright            : (C) 2020 by Simon Wiedemann
-        email                : si.wiedemann@outlook.de
+        copyright            : (C) 2020 by Simon Hodrus
+        email                : s.hodrus@gmx.de
  ***************************************************************************/
 
 /***************************************************************************
@@ -366,6 +366,7 @@ class CalculatePayoffUI(QDialog):
         entd['docTitle'] = self.docTitle
         entd['payThresh'] = self.payoffThreshold
         entd['unitPrice'] = self.unitPrice
+        entd['include_gemarkung'] = self.cbIncludeGemarkung.isChecked()                                 
         return entd
 
     def setupUi(self, CalculatePayoff):
@@ -468,6 +469,12 @@ class CalculatePayoffUI(QDialog):
         self.leThreshold.setGeometry(QtCore.QRect(220, 80, 150, 25))
         self.leThreshold.setSizePolicy(sizePolicy)
         self.leThreshold.setObjectName(_fromUtf8("leThreshold"))
+
+        self.cbIncludeGemarkung = QtWidgets.QCheckBox(CalculatePayoff)
+        self.cbIncludeGemarkung.setGeometry(QtCore.QRect(10, 110, 300, 20))
+        self.cbIncludeGemarkung.setText("Gemarkung / Flurstücksliste anzeigen")
+        self.cbIncludeGemarkung.setObjectName("cbIncludeGemarkung")
+        self.cbIncludeGemarkung.setChecked(False)  # oder True, je nach Wunsch
 
         self.btnCheck = QtWidgets.QPushButton(CalculatePayoff)
         self.btnCheck.setGeometry(QtCore.QRect(10, 413, 75, 23))
@@ -647,6 +654,33 @@ class ParcelsOwner(object):
         """get count of unique parcels"""
         uniqueIds = np.unique(np.array([ph.flsnr for ph in self.sharedParcelsHolds]))                                                                           # get unique parcel ids from all holding shares
         return len(uniqueIds)
+    
+
+    def GetParcelLabels(self, include_gemarkung=True):
+        """added by dkost: returns unique formatted parcel labels like '146063-22/5' or '146063-237'"""
+        labels = set()
+        for ph in self.sharedParcelsHolds:
+            parts = str(ph.flsnr).split('-')
+            if len(parts) != 3:
+                continue  # ungültig, überspringen
+            gemarkung = parts[0]
+            flur = parts[1]
+            zaehler_nenner = parts[2].split('/')
+            if len(zaehler_nenner) != 2:
+                continue  # ungültig
+
+            zaehler = zaehler_nenner[0].lstrip('0') or '0'
+            nenner = zaehler_nenner[1]
+            if nenner.strip('_') == '':  # leerer Nenner
+                label = f"{zaehler}"
+            else:
+                label = f"{zaehler}/{nenner.lstrip('0') or '0'}"
+
+            if include_gemarkung:
+                label = f"{gemarkung}-{label}"
+
+            labels.add(label)
+        return sorted(labels)
 
 
 class ParcelShare(object):
@@ -1261,7 +1295,7 @@ class HuntRegUI(QDialog):
                   u"Gesamtbetrag: {} Euro\n"
                   .format(entryData['docTitle'], date, entryData['unitPrice'], entryData['payThresh'], round(totalUnPacSur, 1), totalmoney))
 
-        colheads = ["Eigner", "Lage", "FlurAnz", "unb. Fläche", "Betrag", "Ausz."]                                                                              # generate a column head for the csv columns
+        colheads = ["Eigner", "Lage", "Flurstuecke", "FlurAnz", "unb. Fläche", "Betrag", "Ausz."]                                                               # generate a column head for the csv columns
         parcelOwnerList.sort(key=lambda x: x.filterName, reverse=False)                                                                                         # filter all parcel pacerl owners according to the filter name
 
         try:
@@ -1273,6 +1307,10 @@ class HuntRegUI(QDialog):
                 for owner in parcelOwnerList:                                                                                                                   # enumerate parcel owners
                     onames = self.processNames(owner.ownerNames, owner.ownerGroup)                                                                              # join all owner names to a single string
                     streets = owner.GetStreets()                                                                                                                # get the string representation for the parcel streets
+                    #input argument include_gemarkung comes from entryData['include_gemarkung']                                                                                           
+                    parcelLabels = format(", ".join(owner.GetParcelLabels(entryData['include_gemarkung'])))                                     # added by dkost: get list of parcelids,
+                                                                                       
+                        
                     pc = owner.GetParcelCount()                                                                                                                 # get the parcel count for the owner
                     unparea = round(owner.gSurUnPacOwn, 1)                                                                                                      # get the owners total huntable area for all parcel shares
                     value = owner.CalcPayoffFract(entryData['unitPrice'])                                                                                       # calculate the owners pay off value according to the square metre unit price
@@ -1281,7 +1319,7 @@ class HuntRegUI(QDialog):
                     else:
                         pay = "Nein"
 
-                    cells = [onames, streets, pc, unparea, value, pay]
+                    cells = [onames, streets, parcelLabels, pc, unparea, value, pay]
                     outfile.write(','.join(u"\"{}\"".format(c) for c in cells) + '\n')                                                                          # get csv line string for all cells
         except PermissionError:
             QMessageBox.critical(None, "Fehler", u"Überschreiben verweigert. Ist die Datei geöffnet?")
@@ -1393,12 +1431,13 @@ class HuntRegUI(QDialog):
 <td style="width: 100%%; height: 16px;" colspan="10"><hr style="width: 100%%;" /></td>
 </tr>
 <tr class="fls_col_names" style="height: 18px;">
-<td style="width: 50%%; height: 18px;" colspan="5">Eigner</td>
-<td style="width: 20%%; height: 18px; text-align: right;">Lage</td>
+<td style="width: 20%%; height: 18px;" colspan="4">Eigner</td>
+<td style="width: 15%%; height: 18px; text-align: right;">Lage</td>
+<td style="width: 20%%; height: 18px; text-align: right;">Flurstcke</td>
 <td style="width: 5%%; height: 18px; text-align: right;">FlurAnz.</td>
-<td style="width: 10%%; height: 18px; text-align: right;">unb. Fl&auml;che</td>
-<td style="width: 10%%; height: 18px; text-align: right;">Betrag</td>
-<td style="width: 5%%; height: 18px; text-align: right;">Ausz.</td>
+<td style="width: 15%%; height: 18px; text-align: right;">unb. Fl&auml;che</td>
+<td style="width: 15%%; height: 18px; text-align: right;">Betrag</td>
+<td style="width: 10%%; height: 18px; text-align: right;">Ausz.</td>
 </tr>
 <tr style="height: 16px;">
 <td style="width: 100%%; height: 16px;" colspan="10"><hr style="width: 100%%;" /></td>
@@ -1407,9 +1446,12 @@ class HuntRegUI(QDialog):
 
         ownersum = dict()
         for owner in parcelOwnerList:
-            ownersum['onames'] = "<pre>{}</pre>".format(self.processNames(owner.ownerNames, owner.ownerGroup))                                                  # join all owner names to a single string
-            ownersum['streets'] = "<pre>{}</pre>".format(owner.GetStreets())                                                                                    # get the string representation for the parcel streets
-            ownersum['pc'] = owner.GetParcelCount()                                                                                                             # get the parcel count for the owner
+            ownersum['onames'] = "<div style='white-space: pre-wrap; word-wrap: break-word; max-width: 20%;'>{}</div>".format(self.processNames(owner.ownerNames, owner.ownerGroup))                                                  # join all owner names to a single string
+            ownersum['streets'] = "<div style='white-space: pre-wrap; word-wrap: break-word; max-width: 15%;'>{}</div>".format(owner.GetStreets())                                                                                    # get the string representation for the parcel streets
+            ownersum['pc'] = owner.GetParcelCount()                                                                                                             # get the parcel count for the owner       
+            #input argument include_gemarkung comes from entryData['include_gemarkung']                                                                                           
+            ownersum['flurstuecke'] = "<div style='white-space: pre-wrap; word-wrap: break-word; max-width: 20%;'>{}</div>".format(", ".join(owner.GetParcelLabels(entryData['include_gemarkung'])))                                                                                    # added by dkost: get list of parcelids,
+
             ownersum['unparea'] = round(owner.gSurUnPacOwn, 1)                                                                                                  # get the owners total huntable area for all parcel shares
             ownersum['value'] = owner.CalcPayoffFract(entryData['unitPrice'])                                                                                   # calculate the owners pay off value according to the square metre unit price
             if(owner.PayoffYesNo(entryData['payThresh'], ownersum['value'])):                                                                                   # indicator string if the pay off treshold is reached
@@ -1419,12 +1461,13 @@ class HuntRegUI(QDialog):
 
             html += u"""
 <tr style="height: 16px;">
-<td style="width: 50%%; height: 16px;" colspan="5">%(onames)s</td>
-<td style="width: 20%%; height: 16px; text-align: right;">%(streets)s</td>
+<td style="width: 20%%; height: 16px;" colspan="4">%(onames)s</td>
+<td style="width: 15%%; height: 16px; text-align: right;">%(streets)s</td>
+<td style="width: 20%%; height: 16px; text-align: right;">%(flurstuecke)s</td>
 <td style="width: 5%%; height: 16px; text-align: right;">%(pc)s</td>
-<td style="width: 10%%; height: 16px; text-align: right;">%(unparea)s m&sup2;</td>
-<td style="width: 10%%; height: 16px; text-align: right;">%(value)s &euro;</td>
-<td style="width: 5%%; height: 16px; text-align: right;">%(pay)s</td>
+<td style="width: 15%%; height: 16px; text-align: right;">%(unparea)s m&sup2;</td>
+<td style="width: 15%%; height: 16px; text-align: right;">%(value)s &euro;</td>
+<td style="width: 10%%; height: 16px; text-align: right;">%(pay)s</td>
 </tr>
 <tr style="height: 16px;">
 <td style="width: 100%%; height: 16px;" colspan="10"><hr style="width: 100%%;" /></td>
