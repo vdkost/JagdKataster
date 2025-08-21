@@ -472,7 +472,7 @@ class CalculatePayoffUI(QDialog):
 
         self.cbIncludeGemarkung = QtWidgets.QCheckBox(CalculatePayoff)
         self.cbIncludeGemarkung.setGeometry(QtCore.QRect(10, 110, 300, 20))
-        self.cbIncludeGemarkung.setText("Gemarkung / Flurstücksliste anzeigen")
+        self.cbIncludeGemarkung.setText("Gemarkungsnr. in Flurstücksliste aufnehmen")
         self.cbIncludeGemarkung.setObjectName("cbIncludeGemarkung")
         self.cbIncludeGemarkung.setChecked(False)  # oder True, je nach Wunsch
 
@@ -1433,7 +1433,7 @@ class HuntRegUI(QDialog):
 <tr class="fls_col_names" style="height: 18px;">
 <td style="width: 20%%; height: 18px;" colspan="4">Eigner</td>
 <td style="width: 15%%; height: 18px; text-align: right;">Lage</td>
-<td style="width: 20%%; height: 18px; text-align: right;">Flurstcke</td>
+<td style="width: 20%%; height: 18px; text-align: right;">Flurst&uuml;cke</td>
 <td style="width: 5%%; height: 18px; text-align: right;">FlurAnz.</td>
 <td style="width: 15%%; height: 18px; text-align: right;">unb. Fl&auml;che</td>
 <td style="width: 15%%; height: 18px; text-align: right;">Betrag</td>
