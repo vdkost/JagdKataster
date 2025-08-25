@@ -629,7 +629,8 @@ class ParcelsOwner(object):
 
     def GetFilterName(self):
         """get the filter str key to filter the owners"""
-        if self.ownerGroup is not None:                                                                                                                         # in case the owner constist of multiple owners return the owner group string
+        
+        if self.ownerGroup is not None and self.ownerGroup not in ["(Einzeleigentum)", "(Miteigentum)", "(Unbekannt (Angabe fehlt in Datensatz))"]:                                                                                                                                                 # in case the owner consists of multiple owners return the owner group string, dkost: for the explicitly set ownerTypes "(Unbekannt (Angabe fehlt in Datensatz))", "(Einzeleigentum)" and "(Miteigentum)" we want to sort by the surname too.
             return self.ownerGroup
         else:
             sSplit = self.ownerNames[0].split(';')
