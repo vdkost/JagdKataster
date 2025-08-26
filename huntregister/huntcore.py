@@ -689,7 +689,8 @@ class HuntCore():
                             # 1. Alle Einträge, deren 'name1' mit 'sonstiges' beginnen (Groß-/Kleinschreibung egal), sollen am ENDE der Liste stehen.
                             # 2. Alle anderen Einträge sollen alphabetisch nach 'name1' sortiert werden (ebenfalls case-insensitive).
                             bsel = sorted(
-                                best['bse'],
+                                #best['bse'],                                                                                                           # use all entries for sorting
+                                [n for n in best['bse'] if not n['name1'].strip().lower().startswith("sonstiges:")],                                    # alternativelly completely filter name entries which starts with "Sonstiges:"
                                 key=lambda n: (
                                     n['name1'].strip().lower().startswith("sonstiges:"),  # True (1) für Sonstiges → wird nach hinten sortiert
                                     n['name1'].strip().lower()                           # alphabetisch sortieren, unabhängig von Groß-/Kleinschreibung
@@ -752,10 +753,13 @@ class HuntCore():
         owners = []                                                                                                                                     # list of owners
 
         for ent in entries:                                                                                                                             # iterata all owner entries
+            name = ent['name']
             name1 = ent['name1']
             if len(name1) > 0:                                                                                                                          # ignore empty entries
                 if name1[0] == '(' and name1[-1] == ')':                                                                                                # filter type entries
                     ownerTypes.add(name1)
+                elif name[0] == '(':                                                                                                                    # other creteria for filtering type entries
+                    ownerTypes.add(f"({name1})")
                 else:
                     owners.append(ent)                                                                                                                  # filter valid entries
 
